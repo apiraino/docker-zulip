@@ -1,18 +1,26 @@
+---
 version: "2"
 services:
   database:
     image: "zulip/zulip-postgresql:10"
+    networks:
+      - internal-network
+      - externalbridge
     environment:
       POSTGRES_DB: "zulip"
       POSTGRES_USER: "zulip"
       # Note that you need to do a manual `ALTER ROLE` query if you
       # change this on a system after booting the postgres container
       # the first time on a host.  Instructions are available in README.md.
-      POSTGRES_PASSWORD: "REPLACE_WITH_SECURE_POSTGRES_PASSWORD"
+      POSTGRES_PASSWORD: "zulip"
     volumes:
       - "/opt/docker/zulip/postgresql/data:/var/lib/postgresql/data:rw"
+    ports:
+      - '5434:5432'
   memcached:
     image: "memcached:alpine"
+    networks:
+      - internal-network
     command:
       - "sh"
       - "-euc"
@@ -28,6 +36,8 @@ services:
     restart: always
   rabbitmq:
     image: "rabbitmq:3.7.7"
+    networks:
+      - internal-network
     restart: always
     environment:
       RABBITMQ_DEFAULT_USER: "zulip"
@@ -36,6 +46,8 @@ services:
       - "/opt/docker/zulip/rabbitmq:/var/lib/rabbitmq:rw"
   redis:
     image: "redis:alpine"
+    networks:
+      - internal-network
     command:
       - "sh"
       - "-euc"
@@ -48,6 +60,12 @@ services:
       - "/opt/docker/zulip/redis:/data:rw"
   zulip:
     image: "zulip/docker-zulip:4.11-0"
+    networks:
+      - internal-network
+      - externalbridge
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      # - host.docker.internal:127.0.0.1
     build:
       context: .
       args:
@@ -71,7 +89,7 @@ services:
       # These should match RABBITMQ_DEFAULT_PASS, POSTGRES_PASSWORD,
       # MEMCACHED_PASSWORD, and REDIS_PASSWORD above.
       SECRETS_rabbitmq_password: "REPLACE_WITH_SECURE_RABBITMQ_PASSWORD"
-      SECRETS_postgres_password: "REPLACE_WITH_SECURE_POSTGRES_PASSWORD"
+      SECRETS_postgres_password: "zulip"
       SECRETS_memcached_password: "REPLACE_WITH_SECURE_MEMCACHED_PASSWORD"
       SECRETS_redis_password: "REPLACE_WITH_SECURE_REDIS_PASSWORD"
       SECRETS_secret_key: "REPLACE_WITH_SECURE_SECRET_KEY"
@@ -92,3 +110,9 @@ services:
       nofile:
         soft: 1000000
         hard: 1048576
+
+networks:
+  internal-network:
+    name: internal-network
+  externalbridge:
+    external: true
