@@ -1,11 +1,12 @@
 ---
 version: "2"
 services:
+
   database:
     image: "zulip/zulip-postgresql:10"
-    networks:
-      - internal-network
-      - externalbridge
+    # networks:
+    #   - internal-network
+    #   - externalbridge
     environment:
       POSTGRES_DB: "zulip"
       POSTGRES_USER: "zulip"
@@ -14,13 +15,16 @@ services:
       # the first time on a host.  Instructions are available in README.md.
       POSTGRES_PASSWORD: "zulip"
     volumes:
-      - "/opt/docker/zulip/postgresql/data:/var/lib/postgresql/data:rw"
+      # - viblio-frontend-volume:/app/node_modules
+      # - "/opt/docker/zulip/postgresql/data:/var/lib/postgresql/data:rw"
+      - postgres:/var/lib/postgresql/data
     ports:
       - '5434:5432'
+
   memcached:
     image: "memcached:alpine"
-    networks:
-      - internal-network
+    # networks:
+    #   - internal-network
     command:
       - "sh"
       - "-euc"
@@ -34,20 +38,22 @@ services:
       MEMCACHED_SASL_PWDB: "/home/memcache/memcached-sasl-db"
       MEMCACHED_PASSWORD: "REPLACE_WITH_SECURE_MEMCACHED_PASSWORD"
     restart: always
+
   rabbitmq:
     image: "rabbitmq:3.7.7"
-    networks:
-      - internal-network
+    # networks:
+    #   - internal-network
     restart: always
     environment:
       RABBITMQ_DEFAULT_USER: "zulip"
       RABBITMQ_DEFAULT_PASS: "REPLACE_WITH_SECURE_RABBITMQ_PASSWORD"
     volumes:
-      - "/opt/docker/zulip/rabbitmq:/var/lib/rabbitmq:rw"
+      - rabbitmq:/var/lib/rabbitmq
+
   redis:
     image: "redis:alpine"
-    networks:
-      - internal-network
+    # networks:
+    #   - internal-network
     command:
       - "sh"
       - "-euc"
@@ -57,12 +63,13 @@ services:
     environment:
       REDIS_PASSWORD: "REPLACE_WITH_SECURE_REDIS_PASSWORD"
     volumes:
-      - "/opt/docker/zulip/redis:/data:rw"
+      - redis:/data
+
   zulip:
     image: "zulip/docker-zulip:4.11-0"
-    networks:
-      - internal-network
-      - externalbridge
+    # networks:
+    #   - internal-network
+    #   - externalbridge
     extra_hosts:
       - host.docker.internal:host-gateway
       # - host.docker.internal:127.0.0.1
@@ -93,7 +100,7 @@ services:
       SECRETS_memcached_password: "REPLACE_WITH_SECURE_MEMCACHED_PASSWORD"
       SECRETS_redis_password: "REPLACE_WITH_SECURE_REDIS_PASSWORD"
       SECRETS_secret_key: "REPLACE_WITH_SECURE_SECRET_KEY"
-      SETTING_EXTERNAL_HOST: "localhost.localdomain"
+      SETTING_EXTERNAL_HOST: "zulip.local"
       SETTING_ZULIP_ADMINISTRATOR: "admin@example.com"
       SETTING_EMAIL_HOST: "" # e.g. smtp.example.com
       SETTING_EMAIL_HOST_USER: "noreply@example.com"
@@ -105,14 +112,20 @@ services:
       # Uncomment this when configuring the mobile push notifications service
       # SETTING_PUSH_NOTIFICATION_BOUNCER_URL: 'https://push.zulipchat.com'
     volumes:
-      - "/opt/docker/zulip/zulip:/data:rw"
+      - appdata:/data
     ulimits:
       nofile:
         soft: 1000000
         hard: 1048576
 
-networks:
-  internal-network:
-    name: internal-network
-  externalbridge:
-    external: true
+# networks:
+#   internal-network:
+#     name: internal-network
+#   externalbridge:
+#     external: true
+
+volumes:
+  postgres:
+  rabbitmq:
+  redis:
+  appdata:
